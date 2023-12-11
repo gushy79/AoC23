@@ -17,11 +17,12 @@ and should be included in your sum. (Periods (.) do not count as a symbol.)
 */
 
 // config
-let runMode: string  = "sample";  // sample / real
+let runMode: string  = "real";  // sample / real
 
 // ***** do not edit below this line *****
 // import libraries
 import { readFileSync } from 'fs';
+import { exit } from 'process';
 
 let dataFile: string = './a-sample-data.txt'; // sample data file
 if (runMode == "real") dataFile = './a-data.txt'; // real/live data file
@@ -29,14 +30,121 @@ if (runMode == "real") dataFile = './a-data.txt'; // real/live data file
 // set variables
 let resultsArray: number[] = [0];
 let answerCounter: number = 0;
-let lineAbove: number[] = [0];
-lineAbove.pop(); // hack to make an empty, assigned array
-let currentline: number[] = [0];
-currentline.pop(); // hack to make an empty, assigned array
-let lineBelow: number[] = [0];
-lineBelow.pop(); // hack to make an empty, assigned array
+let topLine: string[] = ['0'];
+topLine.pop(); // hack to make an empty, assigned array
+let middleLine: string[] = ['0'];
+middleLine.pop(); // hack to make an empty, assigned array
+let bottomLine: string[] = ['0'];
+bottomLine.pop(); // hack to make an empty, assigned array
 let partNumbers: number[] = [0];
 let calcAnswer: number = 0;
+
+function IsCharAlphanumeric(checkString: string): boolean {
+    if (checkString === undefined) return false
+    let strRegex = new RegExp(/^[a-z0-9.]+$/i);
+    return strRegex.test(checkString); 
+}
+
+function IsCharSymbol(checkString: string): boolean {
+    if (checkString === undefined) return false
+    return !IsCharAlphanumeric(checkString);
+}
+
+
+// function: check for parts (line data, counter) array of numbers
+function CheckForParts(line: string, lineCounter: number): boolean { 
+    let foundParts: boolean = false;
+    // if counter = 0
+    if (lineCounter == 0) {
+        // add line to middle array
+        bottomLine = Array.from(line);
+        // return false
+        return false;
+    } else {
+        // set top array = middle array
+        topLine = middleLine;
+        // set middle array = bottom array
+        middleLine = bottomLine;
+        // set bottom array = line
+        bottomLine = Array.from(line);
+    }
+    // walk through middle array
+    if (lineCounter > 0) {
+        let charCounter = 0;
+        let tempNumber: string = "";
+        let matchedNumber: string = "";
+        let matchFlag: boolean = false;
+        middleLine.forEach(lineChar => {
+            // if number get index id (mID)
+            if (!isNaN(+lineChar)) {
+                // is match flag set, if yes no need to check for symbols, it's part of the same number
+                if (matchFlag) {
+                    // add to matched number
+                    matchedNumber = matchedNumber.concat(lineChar);
+                } else {
+                    // check top array for symbols at locations mID-1, mID, mID+1
+                    if (IsCharSymbol(topLine[charCounter-1]) || IsCharSymbol(topLine[charCounter]) || IsCharSymbol(topLine[charCounter+1])) {
+                        // if Y add to matched number
+                        if (tempNumber != '' && matchedNumber == '') matchedNumber = tempNumber;
+                        matchedNumber = matchedNumber.concat(lineChar);
+                        // set match flag
+                        matchFlag = true;
+                    // if match flag = false, check middle array for symbols at mID-1, mID+1
+                    } else if (IsCharSymbol(middleLine[charCounter-1]) || IsCharSymbol(middleLine[charCounter]) || IsCharSymbol(middleLine[charCounter+1])) {
+                        // if Y add to return array
+                        if (tempNumber != '' && matchedNumber == '') matchedNumber = tempNumber;
+                        matchedNumber = matchedNumber.concat(lineChar);
+                        // set match flag
+                        matchFlag = true;
+                    } else if (IsCharSymbol(bottomLine[charCounter-1]) || IsCharSymbol(bottomLine[charCounter]) || IsCharSymbol(bottomLine[charCounter+1])) {
+                    // if match flag = false, check bottom array for symbols at mID-1, mID+1
+                        // if Y add to return array
+                        if (tempNumber != '' && matchedNumber == '') matchedNumber = tempNumber;
+                        matchedNumber = matchedNumber.concat(lineChar);
+                        // set match flag
+                        matchFlag = true;
+                    } else {
+                        // add the number to temp holding variable in case the symbol comes later.
+                        tempNumber = tempNumber.concat(lineChar);
+                    }
+                }
+            } else {
+                // if match flag set
+                if (matchFlag) {
+                    // add to array
+                    resultsArray.push(+matchedNumber);
+                    // set found parts flag
+                    foundParts = true;
+                    // reset match flag
+                    matchFlag = false;
+                    // reset matched number
+                    matchedNumber = '';
+                    // reset holding / temp number
+                    tempNumber = '';
+                } else {
+                    tempNumber = '';
+                }
+            }
+            // increment index counter
+            charCounter++;
+        });
+        // if last matched part was the end of the line
+        if (matchFlag) {
+            // add to array
+            resultsArray.push(+matchedNumber);
+            // set found parts flag
+            foundParts = true;
+            // reset match flag
+            matchFlag = false;
+            // reset matched number
+            matchedNumber = '';
+            // reset holding / temp number
+            tempNumber = '';
+        }
+    }
+    // return array or false
+    return foundParts;
+}
 
 // read file
 const data = readFileSync(dataFile, 'utf-8');
@@ -50,33 +158,29 @@ for (const line of lines) {
     if (line.trim() != "") {
         // reset max values
         calcAnswer = 0;
-        // split line data
-        let lineData = line.split(": ");
-        // or using regex
-        // let lineData = line.split(/, |; /gm);
-
-        // walk through data array
-        lineData.forEach(dataPoint => {
-            // do stuff
-            
-        })
-        // calculate answer and add to array
-        calcAnswer = 1 + 2 + 3;
-        resultsArray.push(calcAnswer);
+        
+        // check for parts (line, counter)
+        CheckForParts(line.trim(), counter);
     } else {
         // throw error
         throw "Blank line found in data file";
     }
     counter++;
 }
+// run check again for the last line
+if (counter > 0) {
+    // check for parts (line, counter)
+    CheckForParts('', counter);
+}
 
 // walk through answer array
 resultsArray.forEach(result => {
+    // console.log(result);
     // add value to total
     answerCounter += result;
 })
 
 // output result
-console.log(answerCounter);
+console.log("Answer: " + answerCounter);
 
 // eof

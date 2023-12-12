@@ -13,19 +13,6 @@ Its gear ratio is the result of multiplying those two numbers together.
 ...$.*....
 .664.598..
 
-eg.
-467*35
-755*598
-
-1. put found numbers into an object:
-    partNumber: number
-    symbol: string
-    symbolPosition: number 
-2. Find all parts where the symbol is *
-3. Find parts with the same symbolPosition.
-4. Get part numbers for each matched *
-5. Calculate ratio
-6. Add ratio to results array.
 */
 
 // config
